@@ -10,7 +10,7 @@
 
 1. **准备**：
    - 在仓库根目录 `git pull --ff-only origin main`。
-   - **读采集层候选清单**（见第四节）：`git fetch --depth 1 origin sources && rm -rf /tmp/sources && mkdir -p /tmp/sources && git archive FETCH_HEAD | tar -x -C /tmp/sources`。看 `/tmp/sources/status.md` 第一行的抓取时间：如果早于今天新加坡时间 05:00（今天的采集没跑），先试 `gh workflow run fetch-sources.yml -R tyr1105/daily-news`，几分钟后再取一次；还是旧的就照常编，只靠搜索，并在 `note` 里写明“今天采集层未更新，热度判断仅供参考”。
+   - **读采集层候选清单**（见第四节）：`git fetch --depth 1 origin sources && rm -rf /tmp/sources && mkdir -p /tmp/sources && git archive FETCH_HEAD | tar -x -C /tmp/sources`。看 `/tmp/sources/status.md` 第一行的抓取时间：如果早于今天新加坡时间 05:00（今天的采集没跑），先用 `gh api -X POST repos/tyr1105/daily-news/actions/workflows/fetch-sources.yml/dispatches -f ref=main` 手动触发采集（`gh workflow run` 在这个环境用不了），约 3 分钟后再取一次；还是旧的就照常编，只靠搜索，并在 `note` 里写明“今天采集层未更新，热度判断仅供参考”。
    - 读取最近一期 `docs/data/<日期>.json`，按栏目列出它的标题，用来避免重复。同一件事只有出现重大新进展时才能再收，并在标题里写明新进展。
 2. **调研**：用 Agent 工具**同时**启动 5 个子代理，每个栏目一个。给每个子代理的提示里完整写进：下面的“通用规则”、该栏目的“栏目设置”、“怎么判断重要度”、“写作规范”、“输出格式”里的单条新闻格式、上一期该栏目的标题，以及两个文件路径：`/tmp/sources/desk-<栏目>.md`（该栏目的候选清单）和 `/tmp/sources/cross.md`（多源同报）。要求每个子代理：
    - **先读这两个文件**，按热度信号挑出 10–15 条候选（同一件事出现在越多来源、热榜排名越靠前、HN 分数和评论越多、来源越权威，越优先），再按栏目设置筛掉不相关的（例如热榜上的纯娱乐八卦）；
@@ -54,7 +54,7 @@
 
 这个环境不能直接访问新闻网站，所以由 GitHub Actions 每天新加坡时间 05:35 运行 `scripts/fetch_sources.py`，抓取后存到仓库的 `sources` 分支（每次覆盖）：
 
-- 中文热榜：微博、知乎、抖音、B 站、今日头条、百度、小红书等（来自 60s 开放接口）
+- 中文热榜：微博、知乎、抖音、今日头条、百度（来自 60s 开放接口）
 - 权威媒体和官方博客的 RSS：BBC、卫报、半岛电视台、CNBC、亚洲新闻台、海峡时报、BBC 中文、中国新闻网、The Verge、TechCrunch、Nature、Science、OpenAI、Google DeepMind、量子位、机器之心、IT之家、IGN、GameSpot、Gematsu、机核等，只保留最近 36 小时
 - 带热度数字的榜单：Hacker News（分数、评论）、Hugging Face 每日论文（点赞）、Steam 热销与新品、Google 趋势（美国、新加坡）、V2EX
 - 每天 60 秒读懂世界

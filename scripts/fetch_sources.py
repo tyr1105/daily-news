@@ -44,12 +44,8 @@ SIXTY = [
     ("weibo", "微博热搜", ["buzz"]),
     ("zhihu", "知乎热榜", ["buzz"]),
     ("douyin", "抖音热搜", ["buzz"]),
-    ("bili", "B站热搜", ["buzz", "games"]),
     ("toutiao", "今日头条热榜", ["buzz", "policy"]),
     ("baidu/hot", "百度热搜", ["buzz"]),
-    ("rednote", "小红书热点", ["buzz"]),
-    ("it-news", "IT资讯", ["ai", "business"]),
-    ("ai-news", "AI资讯", ["ai"]),
 ]
 
 # RSS / Atom feeds from established outlets and official blogs. (url, name, desks)
@@ -101,7 +97,8 @@ FEEDS = [
 # ---- helpers --------------------------------------------------------------
 # Requests per host at a time and the pause after each, so an API such as 60s
 # doesn't answer "429 Too Many Requests". Everything else: 2 at a time, 0.5 s.
-HOST_PACE = {"60s.viki.moe": (1, 1.5)}
+HOST_PACE = {"60s.viki.moe": (1, 15.0)}  # 60s allows only a few requests a minute
+RETRY_429_WAIT = {"60s.viki.moe": 65}
 _host_locks = {}
 _host_locks_guard = threading.Lock()
 
@@ -134,7 +131,7 @@ def get(url, accept="*/*"):
             if attempt == 2 or e.code not in (429, 500, 502, 503, 504):
                 raise
             if e.code == 429:
-                wait = 20
+                wait = RETRY_429_WAIT.get(host, 20)
         except (urllib.error.URLError, TimeoutError):
             if attempt == 2:
                 raise
@@ -447,13 +444,14 @@ def main():
         sys.exit(__doc__)
     out = pathlib.Path(sys.argv[1])
     now = dt.datetime.now(dt.timezone.utc)
-    jobs = [(name, "hotlist", desks, (lambda p=path, n=name, d=desks: fetch_sixty(p, n, d))) for path, name, desks in SIXTY]
+    # The 60s digest goes first: the 60s API is rate-limited, and the digest matters most.
+    jobs = [("每天60秒读懂世界", "digest", ["policy", "buzz"], fetch_60s)]
+    jobs += [(name, "hotlist", desks, (lambda p=path, n=name, d=desks: fetch_sixty(p, n, d))) for path, name, desks in SIXTY]
     jobs += [(name, "rss", desks, (lambda u=url, n=name, d=desks: fetch_feed(u, n, d, now))) for url, name, desks in FEEDS]
     jobs += [
         ("Hacker News", "hotlist", ["ai", "business", "buzz"], fetch_hn),
         ("Hugging Face 每日论文", "hotlist", ["ai"], fetch_hf_papers),
         ("Steam 热销与新品", "hotlist", ["games"], fetch_steam),
-        ("每天60秒读懂世界", "digest", ["policy", "buzz"], fetch_60s),
         ("V2EX 热门", "hotlist", ["buzz", "ai"], fetch_v2ex),
     ]
     with cf.ThreadPoolExecutor(max_workers=24) as pool:
