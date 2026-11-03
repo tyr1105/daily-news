@@ -126,6 +126,8 @@ main { padding-block: 28px 56px; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
 .kind { color: var(--c); font-weight: 700; letter-spacing: .06em; }
 .meta time { font-variant-numeric: tabular-nums; }
+.imp { display: inline-flex; align-items: center; gap: 5px; }
+.imp-label { font-size: 12px; color: var(--ink-3); }
 .pips { display: inline-flex; gap: 2px; align-items: center; }
 .pips i { width: 5px; height: 11px; background: var(--rule); border-radius: 1px; }
 .pips i.on { background: var(--c); }
@@ -220,6 +222,7 @@ footer { border-top: 1px solid var(--rule); }
       <p class="row"><button type="button" id="test-notice">发送测试通知</button><span id="test-result" aria-live="polite"></span></p>
     </section>
     <p><b>五栏日报</b> · 每天早上 8:00（新加坡时间）更新，覆盖前一天到当天早上的新闻。</p>
+    <p>每条新闻旁的格子是重要度，满 5 格：5 全球头条级，4 多家媒体同报的大事，3 值得知道，2 有意思但影响有限，1 补白。“热议”栏目里的格子表示讨论热度。</p>
     <p>内容由 Claude 检索公开报道、交叉核对后整理成中文，难免有疏漏或错误；重要信息请点“来源”查看原文。标有“待证实”的条目目前只有单一来源。</p>
   </div>
 </footer>
@@ -393,8 +396,10 @@ footer { border-top: 1px solid var(--rule); }
   function pips(n, label) {
     const v = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
     if (!v) return null;
-    return h('span', { class: 'pips', role: 'img', 'aria-label': `${label} ${v}/5`, title: `${label} ${v}/5` },
-      [1, 2, 3, 4, 5].map(i => h('i', { class: i <= v ? 'on' : null })));
+    return h('span', { class: 'imp', title: `${label} ${v}/5（满分 5）` },
+      h('span', { class: 'imp-label', 'aria-hidden': 'true', text: label }),
+      h('span', { class: 'pips', role: 'img', 'aria-label': `${label} ${v}/5` },
+        [1, 2, 3, 4, 5].map(i => h('i', { class: i <= v ? 'on' : null }))));
   }
   function metaRow(s, withDesk) {
     const desk = DESK[s._desk];
