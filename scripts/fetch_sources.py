@@ -79,7 +79,6 @@ FEEDS = [
     ("https://www.ithome.com/rss/", "IT之家", ["ai", "business"]),
     ("https://sspai.com/feed", "少数派", ["business"]),
     ("https://www.ifanr.com/feed", "爱范儿", ["business"]),
-    ("https://www.huxiu.com/rss/0.xml", "虎嗅", ["business"]),
     ("https://www.chinanews.com.cn/rss/scroll-news.xml", "中国新闻网", ["policy"]),
     ("https://techcrunch.com/category/startups/feed/", "TechCrunch Startups", ["business"]),
     ("https://news.crunchbase.com/feed/", "Crunchbase News", ["business"]),
@@ -100,35 +99,46 @@ FEEDS = [
 
 
 # ---- helpers --------------------------------------------------------------
-# At most two requests at a time per host, with a short pause after each, so an
-# API such as 60s doesn't answer "429 Too Many Requests".
+# Requests per host at a time and the pause after each, so an API such as 60s
+# doesn't answer "429 Too Many Requests". Everything else: 2 at a time, 0.5 s.
+HOST_PACE = {"60s.viki.moe": (1, 1.5)}
 _host_locks = {}
 _host_locks_guard = threading.Lock()
 
 
-def _host_lock(url):
-    host = urllib.parse.urlsplit(url).hostname or ""
+def _host(url):
+    return urllib.parse.urlsplit(url).hostname or ""
+
+
+def _host_lock(host):
     with _host_locks_guard:
-        return _host_locks.setdefault(host, threading.BoundedSemaphore(2))
+        if host not in _host_locks:
+            _host_locks[host] = threading.BoundedSemaphore(HOST_PACE.get(host, (2, 0.5))[0])
+        return _host_locks[host]
 
 
 def get(url, accept="*/*"):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": accept})
+    host = _host(url)
+    pause = HOST_PACE.get(host, (2, 0.5))[1]
     for attempt in (1, 2):
+        wait = 5
         try:
-            with _host_lock(url):
+            with _host_lock(host):
                 try:
                     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                         return r.read()
                 finally:
-                    time.sleep(0.5)
+                    time.sleep(pause)
         except urllib.error.HTTPError as e:
             if attempt == 2 or e.code not in (429, 500, 502, 503, 504):
                 raise
+            if e.code == 429:
+                wait = 20
         except (urllib.error.URLError, TimeoutError):
             if attempt == 2:
                 raise
-        time.sleep(5)  # one retry after a pause
+        time.sleep(wait)  # one retry after a pause
 
 
 def get_json(url):
@@ -446,7 +456,7 @@ def main():
         ("每天60秒读懂世界", "digest", ["policy", "buzz"], fetch_60s),
         ("V2EX 热门", "hotlist", ["buzz", "ai"], fetch_v2ex),
     ]
-    with cf.ThreadPoolExecutor(max_workers=12) as pool:
+    with cf.ThreadPoolExecutor(max_workers=24) as pool:
         results = list(pool.map(run, jobs))
     items, groups = build(results, now, out)
     bad = [r for r in results if not r["ok"]]
