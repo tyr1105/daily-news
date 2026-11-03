@@ -18,7 +18,10 @@ import json
 import pathlib
 import re
 import sys
+import threading
+import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 SGT = dt.timezone(dt.timedelta(hours=8))
@@ -73,7 +76,6 @@ FEEDS = [
     ("https://www.nature.com/nature.rss", "Nature", ["ai"]),
     ("https://www.science.org/rss/news_current.xml", "Science", ["ai"]),
     ("https://www.qbitai.com/feed", "量子位", ["ai"]),
-    ("https://www.jiqizhixin.com/rss", "机器之心", ["ai"]),
     ("https://www.ithome.com/rss/", "IT之家", ["ai", "business"]),
     ("https://sspai.com/feed", "少数派", ["business"]),
     ("https://www.ifanr.com/feed", "爱范儿", ["business"]),
@@ -98,10 +100,35 @@ FEEDS = [
 
 
 # ---- helpers --------------------------------------------------------------
+# At most two requests at a time per host, with a short pause after each, so an
+# API such as 60s doesn't answer "429 Too Many Requests".
+_host_locks = {}
+_host_locks_guard = threading.Lock()
+
+
+def _host_lock(url):
+    host = urllib.parse.urlsplit(url).hostname or ""
+    with _host_locks_guard:
+        return _host_locks.setdefault(host, threading.BoundedSemaphore(2))
+
+
 def get(url, accept="*/*"):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": accept})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return r.read()
+    for attempt in (1, 2):
+        try:
+            with _host_lock(url):
+                try:
+                    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                        return r.read()
+                finally:
+                    time.sleep(0.5)
+        except urllib.error.HTTPError as e:
+            if attempt == 2 or e.code not in (429, 500, 502, 503, 504):
+                raise
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == 2:
+                raise
+        time.sleep(5)  # one retry after a pause
 
 
 def get_json(url):
