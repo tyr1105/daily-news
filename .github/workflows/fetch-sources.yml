@@ -1,0 +1,49 @@
+name: Fetch news sources
+
+# 采集层：每天新加坡时间 06:05 抓取热榜和 RSS，结果放在 sources 分支（每次覆盖，不保留历史）。
+# 07:07 的每日编辑会先读这份候选清单。
+on:
+  schedule:
+    - cron: '5 22 * * *'   # 22:05 UTC = 06:05 Asia/Singapore
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/fetch_sources.py'
+      - '.github/workflows/fetch-sources.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-sources
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install feedparser
+        run: pip install feedparser==6.0.11
+
+      - name: Fetch hot lists and feeds
+        run: python3 scripts/fetch_sources.py out
+
+      - name: Publish to the sources branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          git init -q -b sources
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "候选清单 $(TZ=Asia/Singapore date '+%F %H:%M')"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" sources:sources
