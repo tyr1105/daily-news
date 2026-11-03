@@ -1,0 +1,548 @@
+<title>五栏日报</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="每天早上 8 点更新：前沿 AI、游戏、政治与经济、商业与产品、热议">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap">
+<style>
+/* Layout: oversized date numerals open the masthead; a sticky desk switcher; lead story beside four top stories; then five desks, each a two-column list of stories */
+:root {
+  --paper: #f2f4f7;
+  --sheet: #ffffff;
+  --ink: #0e1217;
+  --ink-2: #48515e;
+  --ink-3: #626b78;
+  --rule: #dce1e8;
+  --focus: #2449c7;
+  --ai: #2b50cf;
+  --games: #ad2f78;
+  --policy: #b1321d;
+  --business: #0a7556;
+  --buzz: #8f4c00;
+  --display: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --util: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --nav-h: 58px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1014; --sheet: #151a20; --ink: #e9edf2; --ink-2: #a3adba; --ink-3: #8b95a2; --rule: #262c35; --focus: #8fa6ff;
+    --ai: #8ea6ff; --games: #f28cc6; --policy: #ff9583; --business: #52d1a6; --buzz: #ffb35c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d1014; --sheet: #151a20; --ink: #e9edf2; --ink-2: #a3adba; --ink-3: #8b95a2; --rule: #262c35; --focus: #8fa6ff;
+  --ai: #8ea6ff; --games: #f28cc6; --policy: #ff9583; --business: #52d1a6; --buzz: #ffb35c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.75; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: var(--paper); z-index: 10; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, p, dl, dd { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Masthead */
+.mast-in { padding-block: 18px 22px; display: grid; gap: 14px; }
+.brandrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.brand { font-family: var(--display); font-weight: 900; font-size: 22px; letter-spacing: .08em; line-height: 1.2; }
+.issue-nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.iconbtn { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px; cursor: pointer; font-family: var(--util); font-size: 20px; line-height: 1; }
+.iconbtn:disabled { opacity: .35; cursor: default; }
+.issue-nav select { font: inherit; font-size: 14px; height: 38px; max-width: 58vw; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 0 10px; }
+.dateline { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 26px; }
+.bigdate { font-family: var(--util); font-stretch: 62%; font-weight: 800; font-size: clamp(84px, 24vw, 176px); line-height: .8; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.datemeta { display: grid; gap: 6px; padding-bottom: 6px; min-width: 0; flex: 1 1 240px; max-width: 520px; }
+.weekday { font-weight: 700; font-size: 18px; line-height: 1.3; }
+.cover { color: var(--ink-2); font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.mix { display: flex; gap: 3px; height: 8px; margin-top: 4px; }
+.mix span { min-width: 6px; border-radius: 2px; }
+
+/* Desk switcher */
+.desknav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-block: 1px solid var(--rule); }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-block: 10px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border: 1px solid var(--rule); border-radius: 999px; background: var(--sheet); cursor: pointer; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.chip .dot { width: 9px; height: 9px; border-radius: 2px; background: var(--c, var(--ink)); }
+.chip .n { font-family: var(--util); font-variant-numeric: tabular-nums; color: var(--ink-3); font-size: 13px; }
+.chip[aria-current="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip[aria-current="true"] .n { color: inherit; opacity: .75; }
+
+/* Main */
+main { padding-block: 28px 56px; }
+.sect, .story { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--nav-h) + 12px); }
+.eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .16em; color: var(--ink-3); }
+.state { padding-block: 40px; display: grid; gap: 8px; max-width: 60ch; }
+.state-title { font-family: var(--display); font-weight: 900; font-size: 26px; line-height: 1.35; }
+.state-body { color: var(--ink-2); }
+.note { margin-bottom: 22px; padding: 10px 14px; border: 1px dashed var(--rule); border-radius: 8px; color: var(--ink-2); font-size: 14px; }
+
+.front { display: grid; gap: 28px; }
+.overview { display: grid; gap: 8px; max-width: 74ch; }
+.ov-text { font-size: 18px; line-height: 1.85; }
+.front-grid { display: grid; gap: 28px 48px; align-items: start; }
+@media (min-width: 1000px) { .front-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); } }
+
+.lead { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: clamp(18px, 3.4vw, 34px); display: grid; gap: 14px; min-width: 0; }
+.lead h2 { font-family: var(--display); font-weight: 900; font-size: clamp(26px, 4.6vw, 40px); line-height: 1.3; text-wrap: balance; }
+.lead .sum { font-size: 17px; }
+.tops { display: grid; gap: 4px; min-width: 0; }
+.top { border-top: 1px solid var(--rule); padding-block: 14px 16px; display: grid; gap: 6px; min-width: 0; }
+.top:first-of-type { border-top: 0; padding-top: 6px; }
+.toplink { all: unset; cursor: pointer; font-family: var(--display); font-weight: 900; font-size: 19px; line-height: 1.5; text-wrap: balance; }
+.toplink:hover { text-decoration: underline; text-decoration-color: var(--c); text-underline-offset: 4px; }
+.toplink:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+.top .sum { color: var(--ink-2); font-size: 15px; }
+
+.desk { margin-top: 64px; }
+.desk-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding-bottom: 12px; border-bottom: 3px solid var(--c); }
+.desk-h h2 { font-family: var(--display); font-weight: 900; font-size: clamp(26px, 4vw, 32px); line-height: 1.25; display: flex; align-items: center; gap: 12px; }
+.desk-h h2 .sq { width: 14px; height: 14px; background: var(--c); border-radius: 3px; flex: none; }
+.desk-d { color: var(--ink-2); font-size: 14px; }
+.stories { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 52px; }
+@media (min-width: 900px) { .stories { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.empty-desk { padding-block: 20px; color: var(--ink-2); }
+
+.story { min-width: 0; padding-block: 22px 26px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; border-radius: 2px; }
+.stories .story:nth-child(-n+2) { border-top: 0; }
+@media (max-width: 899px) { .stories .story:nth-child(2) { border-top: 1px solid var(--rule); } }
+.story h3 { font-family: var(--display); font-weight: 900; font-size: 21px; line-height: 1.45; text-wrap: balance; }
+.story.flash { animation: flash 1.8s ease-out; }
+@keyframes flash { from { background: color-mix(in srgb, var(--c) 16%, transparent); } to { background: transparent; } }
+
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.kind { color: var(--c); font-weight: 700; letter-spacing: .06em; }
+.meta time { font-variant-numeric: tabular-nums; }
+.pips { display: inline-flex; gap: 2px; align-items: center; }
+.pips i { width: 5px; height: 11px; background: var(--rule); border-radius: 1px; }
+.pips i.on { background: var(--c); }
+.stamp { border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; font-size: 12px; }
+.sum { overflow-wrap: anywhere; }
+.why { font-size: 15px; color: var(--ink-2); overflow-wrap: anywhere; }
+.why b { color: var(--c); margin-right: .5em; }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 128px), 1fr)); gap: 8px 18px; padding: 12px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
+.lead .facts { background: var(--paper); }
+.facts div { min-width: 0; }
+.facts dt { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.facts dd { font-weight: 500; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 10px; }
+.side { padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); font-size: 14px; line-height: 1.65; min-width: 0; }
+.lead .side { background: var(--paper); }
+.side b { display: block; color: var(--c); font-size: 13px; margin-bottom: 2px; }
+.src { font-size: 13px; line-height: 1.6; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.src a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-decoration-thickness: 1px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.src a:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+footer { border-top: 1px solid var(--rule); }
+.foot-in { padding-block: 24px 40px; display: grid; gap: 6px; color: var(--ink-3); font-size: 13px; line-height: 1.7; max-width: 80ch; }
+.foot-in b { color: var(--ink-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .story.flash { animation: none; }
+}
+</style>
+<!-- page -->
+<header class="mast">
+  <div class="wrap mast-in">
+    <div class="brandrow">
+      <p class="brand">五栏日报</p>
+      <div class="issue-nav">
+        <button class="iconbtn" id="older" type="button" aria-label="前一期" disabled>‹</button>
+        <label class="sr" for="issue">选择日期</label>
+        <select id="issue" disabled><option>载入中</option></select>
+        <button class="iconbtn" id="newer" type="button" aria-label="后一期" disabled>›</button>
+      </div>
+    </div>
+    <div class="dateline">
+      <p class="bigdate" id="bigdate" aria-hidden="true">--.--</p>
+      <div class="datemeta">
+        <p class="weekday" id="weekday">前沿 AI · 游戏 · 政治与经济 · 商业与产品 · 热议</p>
+        <p class="cover" id="cover">每天早上 8:00（新加坡时间）出新一期</p>
+        <div class="mix" id="mix" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="desknav" aria-label="栏目">
+  <div class="wrap"><div class="chips" id="chips"></div></div>
+</nav>
+
+<main class="wrap" id="main">
+  <section class="state" id="state" aria-live="polite">
+    <p class="state-title" id="state-title">正在载入最新一期</p>
+    <p class="state-body" id="state-body">五栏日报每天早上 8:00（新加坡时间）出新一期，覆盖前沿 AI、游戏、政治与经济、商业与产品、热议五个栏目。</p>
+  </section>
+  <div id="edition" hidden>
+    <p class="note" id="note" hidden></p>
+    <section class="front sect" id="desk-front" data-key="front">
+      <div class="overview">
+        <p class="eyebrow">今日速览</p>
+        <p class="ov-text" id="overview"></p>
+      </div>
+      <div class="front-grid">
+        <article class="lead" id="lead"></article>
+        <div class="tops">
+          <p class="eyebrow">要闻</p>
+          <div id="tops"></div>
+        </div>
+      </div>
+    </section>
+    <div id="desks"></div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <p><b>五栏日报</b> · 每天早上 8:00（新加坡时间）更新，覆盖前一天到当天早上的新闻。</p>
+    <p>内容由 Claude 检索公开报道、交叉核对后整理成中文，难免有疏漏或错误；重要信息请点“来源”查看原文。标有“待证实”的条目目前只有单一来源。</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const DESKS = [
+    { key: 'ai', name: '前沿 AI', desc: '公司动态与重大科研进展' },
+    { key: 'games', name: '游戏', desc: '新游发售、新作公布与好玩的东西' },
+    { key: 'policy', name: '政治与经济', desc: '各国新出台的政策、法规与经济动向' },
+    { key: 'business', name: '商业与产品', desc: '值得关注的新公司和有意思的新产品' },
+    { key: 'buzz', name: '热议', desc: '正在快速升温的话题、讨论与争论' },
+  ];
+  const DESK = Object.fromEntries(DESKS.map(d => [d.key, d]));
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const $ = id => document.getElementById(id);
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const S = { source: null, issues: [], date: null, edition: null, pinned: false, unsubIssues: null, unsubEdition: null, timer: null };
+
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+    for (const kid of kids.flat()) {
+      if (kid == null || kid === false) continue;
+      el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  }
+  const str = v => (typeof v === 'string' ? v : v == null ? '' : String(v)).trim();
+  const arr = v => (Array.isArray(v) ? v : []);
+  function safeUrl(u) {
+    try { const x = new URL(str(u)); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : null; } catch (_) { return null; }
+  }
+  function ymd(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str(s)); return m ? { y: +m[1], m: +m[2], d: +m[3] } : null; }
+  function md(s) { const p = ymd(s); return p ? `${p.m}月${p.d}日` : str(s); }
+  function dotDate(s) { const p = ymd(s); return p ? `${String(p.m).padStart(2, '0')}.${String(p.d).padStart(2, '0')}` : '--.--'; }
+  function weekday(s) { const p = ymd(s); return p ? '星期' + '日一二三四五六'[new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay()] : ''; }
+  function clock(iso) {
+    const t = new Date(str(iso));
+    if (isNaN(t)) return '';
+    try { return t.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }); } catch (_) { return ''; }
+  }
+
+  // ---------- data sources: the artifact's own database inside claude.ai, JSON files everywhere else
+  function dbSource(db) {
+    return {
+      watchIssues(next, fail) {
+        return db.collection('issues').orderBy('date', 'desc').limit(1000)
+          .onSnapshot(s => next(s.docs.map(d => d.data())), fail);
+      },
+      watchEdition(date, next, fail) {
+        return db.doc('editions/' + date).onSnapshot(s => next(s.exists ? s.data() : null), fail);
+      },
+    };
+  }
+  function fileSource() {
+    const get = (path, next, fail) => {
+      let live = true;
+      fetch(path, { cache: 'no-cache' })
+        .then(r => { if (r.status === 404) return null; if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(j => { if (live) next(j); })
+        .catch(e => { if (live) fail(e); });
+      return () => { live = false; };
+    };
+    return {
+      watchIssues(next, fail) { return get('data/index.json', j => next(arr(j && j.issues)), fail); },
+      watchEdition(date, next, fail) { return get('data/' + date + '.json', next, fail); },
+    };
+  }
+
+  // ---------- states
+  function showState(title, body) {
+    $('state-title').textContent = title;
+    $('state-body').textContent = body || '';
+    $('state').hidden = false;
+    $('edition').hidden = true;
+  }
+  function startTimer() {
+    clearTimeout(S.timer);
+    S.timer = setTimeout(() => {
+      if (!S.edition) showState('暂时连不上数据', '可能是网络较慢，稍后再打开看看。');
+    }, 10000);
+  }
+  function stopTimer() { clearTimeout(S.timer); S.timer = null; }
+  function onError(e) {
+    stopTimer();
+    if (!S.edition) showState('暂时读不到内容', '数据读取失败，稍后再打开看看。');
+    if (window.console) console.warn('五栏日报：读取失败', e);
+  }
+
+  // ---------- issues and routing
+  function hashDate() { const m = /^#(\d{4}-\d{2}-\d{2})$/.exec(location.hash); return m ? m[1] : null; }
+  function onIssues(list) {
+    S.issues = arr(list).filter(x => x && DATE_RE.test(str(x.date))).sort((a, b) => b.date.localeCompare(a.date));
+    if (!S.issues.length) {
+      stopTimer();
+      renderPicker();
+      showState('第一期正在编辑中', '五栏日报每天早上 8:00（新加坡时间）出新一期。');
+      return;
+    }
+    const want = hashDate();
+    const has = d => S.issues.some(i => i.date === d);
+    let target = S.issues[0].date;
+    if (want && has(want)) { target = want; S.pinned = true; }
+    else if (S.pinned && S.date && has(S.date)) target = S.date;
+    select(target);
+  }
+  function select(date) {
+    renderPicker(date);
+    if (S.date === date) return;
+    S.date = date;
+    S.edition = null;
+    if (S.unsubEdition) S.unsubEdition();
+    showState('正在载入 ' + md(date) + ' 这一期', '');
+    startTimer();
+    S.unsubEdition = S.source.watchEdition(date, ed => {
+      if (S.date !== date) return;
+      stopTimer();
+      if (!ed || typeof ed !== 'object') { S.edition = null; showState('这一期没有找到', '换一个日期看看。'); return; }
+      S.edition = ed;
+      render();
+    }, onError);
+  }
+  function go(date) {
+    const latest = S.issues[0] && S.issues[0].date;
+    if (date === latest) {
+      S.pinned = false;
+      if (location.hash) location.hash = ''; else select(date);
+    } else {
+      location.hash = date;
+    }
+  }
+  function step(delta) {
+    const i = S.issues.findIndex(x => x.date === S.date);
+    const n = S.issues[i + delta];
+    if (n) go(n.date);
+  }
+  window.addEventListener('hashchange', () => {
+    if (!S.issues.length) return;
+    const d = hashDate();
+    if (d && S.issues.some(i => i.date === d)) { S.pinned = true; select(d); }
+    else if (!d) { S.pinned = false; select(S.issues[0].date); }
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+  });
+
+  function renderPicker(current) {
+    const sel = $('issue');
+    const cur = current || S.date;
+    sel.replaceChildren(...(S.issues.length ? S.issues.map(i => h('option', {
+      value: i.date,
+      text: `${md(i.date)} ${weekday(i.date)}${i.no ? ' · 第' + i.no + '期' : ''}`,
+    })) : [h('option', { text: '还没有内容' })]));
+    if (cur && S.issues.length) sel.value = cur;
+    const idx = S.issues.findIndex(i => i.date === cur);
+    sel.disabled = S.issues.length < 2;
+    $('older').disabled = idx < 0 || idx >= S.issues.length - 1;
+    $('newer').disabled = idx <= 0;
+  }
+  $('issue').addEventListener('change', e => go(e.target.value));
+  $('older').addEventListener('click', () => step(1));
+  $('newer').addEventListener('click', () => step(-1));
+
+  // ---------- rendering
+  const storiesOf = (ed, key) => arr(ed.sections && ed.sections[key]).filter(s => s && str(s.title));
+  function pips(n, label) {
+    const v = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
+    if (!v) return null;
+    return h('span', { class: 'pips', role: 'img', 'aria-label': `${label} ${v}/5`, title: `${label} ${v}/5` },
+      [1, 2, 3, 4, 5].map(i => h('i', { class: i <= v ? 'on' : null })));
+  }
+  function metaRow(s, withDesk) {
+    const desk = DESK[s._desk];
+    return h('div', { class: 'meta' },
+      h('span', { class: 'kind', text: withDesk ? `${desk.name} · ${str(s.kind) || desk.name}` : (str(s.kind) || desk.name) }),
+      str(s.region) ? h('span', { text: str(s.region) }) : null,
+      ymd(s.date) ? h('time', { datetime: s.date, text: md(s.date) }) : null,
+      pips(s.importance, s._desk === 'buzz' ? '热度' : '重要度'),
+      s.status === 'reported' ? h('span', { class: 'stamp', title: '目前只有单一来源报道', text: '待证实' }) : null);
+  }
+  function details(s) {
+    const facts = arr(s.facts).filter(f => f && str(f.label) && str(f.value)).slice(0, 6);
+    const sides = arr(s.sides).filter(x => x && str(x.label) && str(x.view)).slice(0, 3);
+    const links = arr(s.sources).map(x => ({ name: str(x && x.name) || '原文', url: safeUrl(x && x.url) })).filter(x => x.url).slice(0, 4);
+    return [
+      str(s.why) ? h('p', { class: 'why' }, h('b', { text: '看点' }), str(s.why)) : null,
+      facts.length ? h('dl', { class: 'facts' }, facts.map(f => h('div', null, h('dt', { text: str(f.label) }), h('dd', { text: str(f.value) })))) : null,
+      sides.length ? h('div', { class: 'sides' }, sides.map(x => h('div', { class: 'side' }, h('b', { text: str(x.label) }), str(x.view)))) : null,
+      links.length ? h('p', { class: 'src' }, h('span', { text: '来源' }),
+        links.map(x => h('a', { href: x.url, target: '_blank', rel: 'noopener noreferrer', text: x.name }))) : null,
+    ];
+  }
+  function storyEl(s) {
+    return h('article', { class: 'story', id: 's-' + s.id, tabindex: '-1', style: `--c: var(--${s._desk})` },
+      metaRow(s, false),
+      h('h3', { text: str(s.title) }),
+      str(s.summary) ? h('p', { class: 'sum', text: str(s.summary) }) : null,
+      details(s));
+  }
+  function jumpTo(id) {
+    const el = document.getElementById('s-' + id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    try { el.focus({ preventScroll: true }); } catch (_) {}
+  }
+  function scrollToDesk(key) {
+    const el = $('desk-' + key);
+    if (el) el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  function render() {
+    const ed = S.edition;
+    const counts = {};
+    const all = [];
+    for (const d of DESKS) {
+      const list = storiesOf(ed, d.key).map((s, i) => Object.assign({}, s, { _desk: d.key, id: str(s.id) || `${d.key}-${i + 1}` }));
+      counts[d.key] = list.length;
+      all.push(...list);
+    }
+    const byId = new Map(all.map(s => [s.id, s]));
+    let lead = byId.get(str(ed.lead)) || null;
+    if (!lead && all.length) lead = all.slice().sort((a, b) => (Number(b.importance) || 0) - (Number(a.importance) || 0))[0];
+    const tops = arr(ed.top).map(id => byId.get(str(id))).filter(s => s && s !== lead).slice(0, 4);
+    const total = all.length;
+
+    // masthead
+    $('bigdate').textContent = dotDate(ed.date || S.date);
+    $('weekday').textContent = [weekday(ed.date || S.date), ed.no ? `第 ${ed.no} 期` : null].filter(Boolean).join(' · ');
+    const win = ed.window || {};
+    $('cover').textContent = [
+      ymd(win.from) ? `覆盖 ${md(win.from)}至${md(win.to || ed.date)}` : null,
+      `共 ${total} 条`,
+      clock(ed.published_at) ? `${clock(ed.published_at)} 更新` : null,
+    ].filter(Boolean).join(' · ');
+    $('mix').replaceChildren(...DESKS.filter(d => counts[d.key]).map(d =>
+      h('span', { style: `flex-grow: ${counts[d.key]}; background: var(--${d.key})`, title: `${d.name} ${counts[d.key]} 条` })));
+
+    // desk switcher
+    $('chips').replaceChildren(
+      h('button', { class: 'chip', type: 'button', 'data-key': 'front', onclick: () => window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }) }, '头版'),
+      ...DESKS.map(d => h('button', { class: 'chip', type: 'button', 'data-key': d.key, style: `--c: var(--${d.key})`, onclick: () => scrollToDesk(d.key) },
+        h('i', { class: 'dot' }), d.name, h('span', { class: 'n', text: String(counts[d.key]) }))));
+
+    // note
+    const note = str(ed.note);
+    $('note').textContent = note;
+    $('note').hidden = !note;
+
+    // front page
+    $('overview').textContent = str(ed.overview) || '今天的速览还没写好。';
+    const leadBox = $('lead');
+    if (lead) {
+      leadBox.hidden = false;
+      leadBox.setAttribute('style', `--c: var(--${lead._desk})`);
+      leadBox.replaceChildren(...[
+        h('p', { class: 'eyebrow', text: '头条' }),
+        metaRow(lead, true),
+        h('h2', { text: str(lead.title) }),
+        str(lead.summary) ? h('p', { class: 'sum', text: str(lead.summary) }) : null,
+        details(lead),
+      ].flat().filter(Boolean));
+    } else {
+      leadBox.hidden = true;
+    }
+    $('tops').replaceChildren(...tops.map(s => h('div', { class: 'top', style: `--c: var(--${s._desk})` },
+      metaRow(s, true),
+      h('h3', null, h('button', { class: 'toplink', type: 'button', onclick: () => jumpTo(s.id), text: str(s.title) })),
+      str(s.summary) ? h('p', { class: 'sum', text: str(s.summary) }) : null)));
+    $('tops').parentElement.hidden = !tops.length;
+
+    // desks (the lead story is shown in full on the front page, so it is not repeated here)
+    $('desks').replaceChildren(...DESKS.map(d => {
+      const list = all.filter(s => s._desk === d.key && s !== lead);
+      return h('section', { class: 'desk sect', id: 'desk-' + d.key, 'data-key': d.key, style: `--c: var(--${d.key})`, 'aria-labelledby': 'h-' + d.key },
+        h('header', { class: 'desk-h' },
+          h('h2', { id: 'h-' + d.key }, h('i', { class: 'sq' }), d.name),
+          h('p', { class: 'desk-d', text: `${d.desc} · ${counts[d.key]} 条` })),
+        list.length ? h('div', { class: 'stories' }, list.map(storyEl))
+          : h('p', { class: 'empty-desk', text: lead && lead._desk === d.key ? '这一栏今天的重点是上面的头条。' : '今天这一栏没有找到足够可靠的新消息。' }));
+    }));
+
+    $('state').hidden = true;
+    $('edition').hidden = false;
+    watchActive();
+
+    // inside the Android app: mark the newest issue as read so its notification isn't sent again
+    try {
+      const shown = str(ed.date || S.date);
+      if (window.WulanApp && S.issues[0] && S.issues[0].date === shown) window.WulanApp.seen(shown);
+    } catch (_) {}
+  }
+
+  // highlight the desk currently on screen in the switcher
+  let io = null;
+  function setActive(key) {
+    for (const c of document.querySelectorAll('.chip')) {
+      const on = c.dataset.key === key;
+      if (on) c.setAttribute('aria-current', 'true'); else c.removeAttribute('aria-current');
+      if (on) {
+        const row = $('chips');
+        const left = c.offsetLeft - row.offsetLeft - 16;
+        if (left < row.scrollLeft || c.offsetLeft + c.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollTo({ left: Math.max(0, left), behavior: reduced ? 'auto' : 'smooth' });
+      }
+    }
+  }
+  function watchActive() {
+    if (io) io.disconnect();
+    setActive('front');
+    if (!('IntersectionObserver' in window)) return;
+    const seen = new Map();
+    const order = ['front', ...DESKS.map(d => d.key)];
+    io = new IntersectionObserver(entries => {
+      for (const e of entries) seen.set(e.target.dataset.key, e.isIntersecting);
+      const cur = order.find(k => seen.get(k));
+      if (cur) setActive(cur);
+    }, { rootMargin: '-90px 0px -60% 0px' });
+    document.querySelectorAll('.sect').forEach(el => io.observe(el));
+  }
+
+  // ---------- boot
+  async function boot() {
+    const c = window.claude;
+    if (c && typeof c.use === 'function') {
+      let db = null;
+      try { db = await c.use('db'); } catch (_) { db = null; }
+      if (!db) {
+        showState('登录后才能看到内容', '这一版存放在 claude.ai 上，登录 claude.ai 后打开这个页面就能看到每天的资讯。');
+        return;
+      }
+      S.source = dbSource(db);
+    } else {
+      S.source = fileSource();
+    }
+    startTimer();
+    S.unsubIssues = S.source.watchIssues(onIssues, onError);
+  }
+  boot();
+})();
+</script>

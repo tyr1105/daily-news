@@ -1,0 +1,49 @@
+name: Build Android app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build signed APK
+        working-directory: android
+        run: gradle --no-daemon assembleRelease
+
+      - name: Collect APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk wulan-daily.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wulan-daily-apk
+          path: wulan-daily.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="app-v1.0.${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" wulan-daily.apk \
+            --title "五栏日报 App 1.0.${GITHUB_RUN_NUMBER}" \
+            --notes "安卓安装包。下载 wulan-daily.apk，在手机上打开安装（需要允许“安装未知应用”）。" \
+            --latest

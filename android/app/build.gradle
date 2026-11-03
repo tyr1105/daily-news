@@ -1,0 +1,61 @@
+plugins {
+    id 'com.android.application'
+}
+
+def runNumber = Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+
+android {
+    namespace 'io.github.tyr1105.wulan'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'io.github.tyr1105.wulan'
+        minSdk 26
+        targetSdk 35
+        versionCode runNumber
+        versionName "1.0.${runNumber}"
+        // The website this app shows and checks for new issues
+        buildConfigField 'String', 'SITE_URL', '"https://tyr1105.github.io/daily-news/"'
+    }
+
+    signingConfigs {
+        // A fixed key so a newer APK installs over the old one. It only signs this personal app.
+        wulan {
+            storeFile file('wulan.keystore')
+            storePassword 'wulan-daily'
+            keyAlias 'wulan'
+            keyPassword 'wulan-daily'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.wulan
+        }
+        debug {
+            signingConfig signingConfigs.wulan
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.work:work-runtime:2.9.1'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+}

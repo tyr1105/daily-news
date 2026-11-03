@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Five lines of type, one per desk: AI, games, policy, business, buzz -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#8EA6FF" android:pathData="M33,33h43v6h-43z" />
+    <path android:fillColor="#F28CC6" android:pathData="M33,42h34v6h-34z" />
+    <path android:fillColor="#FF9583" android:pathData="M33,51h40v6h-40z" />
+    <path android:fillColor="#52D1A6" android:pathData="M33,60h28v6h-28z" />
+    <path android:fillColor="#FFB35C" android:pathData="M33,69h37v6h-37z" />
+</vector>
