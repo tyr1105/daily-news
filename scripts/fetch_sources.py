@@ -35,27 +35,18 @@ DESKS = {
 }
 
 # ---- sources --------------------------------------------------------------
-# Hot lists through newsnow (https://github.com/ourongxing/newsnow), the same
-# data source TrendRadar uses. (id, name, desks)
-NEWSNOW = [
+# Chinese hot lists through the 60s open API (https://github.com/vikiboss/60s),
+# a free API collection published for developers. (path, name, desks)
+SIXTY = [
     ("weibo", "微博热搜", ["buzz"]),
     ("zhihu", "知乎热榜", ["buzz"]),
-    ("bilibili-hot-search", "B站热搜", ["buzz", "games"]),
-    ("douyin", "抖音热榜", ["buzz"]),
-    ("toutiao", "今日头条", ["buzz", "policy"]),
-    ("baidu", "百度热搜", ["buzz"]),
-    ("thepaper", "澎湃新闻", ["policy", "buzz"]),
-    ("zaobao", "联合早报", ["policy"]),
-    ("cankaoxiaoxi", "参考消息", ["policy"]),
-    ("wallstreetcn-hot", "华尔街见闻", ["policy", "business"]),
-    ("cls-hot", "财联社", ["policy", "business"]),
-    ("36kr-quick", "36氪快讯", ["business", "ai"]),
-    ("ithome", "IT之家", ["ai", "business"]),
-    ("sspai", "少数派", ["business"]),
-    ("coolapk", "酷安", ["business", "buzz"]),
-    ("producthunt", "Product Hunt", ["business"]),
-    ("github-trending-today", "GitHub 今日趋势", ["ai"]),
-    ("v2ex-share", "V2EX", ["buzz"]),
+    ("douyin", "抖音热搜", ["buzz"]),
+    ("bili", "B站热搜", ["buzz", "games"]),
+    ("toutiao", "今日头条热榜", ["buzz", "policy"]),
+    ("baidu/hot", "百度热搜", ["buzz"]),
+    ("rednote", "小红书热点", ["buzz"]),
+    ("it-news", "IT资讯", ["ai", "business"]),
+    ("ai-news", "AI资讯", ["ai"]),
 ]
 
 # RSS / Atom feeds from established outlets and official blogs. (url, name, desks)
@@ -75,17 +66,23 @@ FEEDS = [
     ("https://feeds.arstechnica.com/arstechnica/index", "Ars Technica", ["ai"]),
     ("https://www.technologyreview.com/feed/", "MIT Technology Review", ["ai"]),
     ("https://www.wired.com/feed/rss", "WIRED", ["ai", "buzz"]),
-    ("https://venturebeat.com/category/ai/feed/", "VentureBeat AI", ["ai"]),
     ("https://openai.com/news/rss.xml", "OpenAI", ["ai"]),
     ("https://deepmind.google/blog/rss.xml", "Google DeepMind", ["ai"]),
     ("https://blog.google/technology/ai/rss/", "Google AI", ["ai"]),
     ("https://huggingface.co/blog/feed.xml", "Hugging Face", ["ai"]),
     ("https://www.nature.com/nature.rss", "Nature", ["ai"]),
     ("https://www.science.org/rss/news_current.xml", "Science", ["ai"]),
-    ("https://36kr.com/feed", "36氪", ["business", "ai"]),
     ("https://www.qbitai.com/feed", "量子位", ["ai"]),
+    ("https://www.jiqizhixin.com/rss", "机器之心", ["ai"]),
+    ("https://www.ithome.com/rss/", "IT之家", ["ai", "business"]),
+    ("https://sspai.com/feed", "少数派", ["business"]),
+    ("https://www.ifanr.com/feed", "爱范儿", ["business"]),
+    ("https://www.huxiu.com/rss/0.xml", "虎嗅", ["business"]),
+    ("https://www.chinanews.com.cn/rss/scroll-news.xml", "中国新闻网", ["policy"]),
     ("https://techcrunch.com/category/startups/feed/", "TechCrunch Startups", ["business"]),
     ("https://news.crunchbase.com/feed/", "Crunchbase News", ["business"]),
+    ("https://www.producthunt.com/feed", "Product Hunt", ["business"]),
+    ("https://www.gcores.com/rss", "机核", ["games"]),
     ("https://feeds.feedburner.com/ign/all", "IGN", ["games"]),
     ("https://www.gamespot.com/feeds/news/", "GameSpot", ["games"]),
     ("https://www.gematsu.com/feed", "Gematsu", ["games"]),
@@ -157,17 +154,49 @@ def item(source, rank, title, url, desks, when=None, heat=None, note=None):
 
 
 # ---- fetchers -------------------------------------------------------------
-def fetch_newsnow(sid, name, desks):
-    data = get_json(f"https://newsnow.busiyi.world/api/s?id={sid}")
-    rows = data.get("items") or []
+def first(d, *keys):
+    for k in keys:
+        v = d.get(k)
+        if v not in (None, "", []):
+            return v
+    return None
+
+
+def when_of(v):
+    if v is None:
+        return None
+    if isinstance(v, (int, float)) or (isinstance(v, str) and v.isdigit()):
+        return from_epoch(v)
+    t = from_iso(v)
+    if t and t.tzinfo is None:
+        t = t.replace(tzinfo=SGT)
+    return t
+
+
+def fetch_sixty(path, name, desks):
+    data = get_json(f"https://60s.viki.moe/v2/{path}")
+    rows = data.get("data")
+    if isinstance(rows, dict):
+        rows = first(rows, "list", "items", "news", "data") or []
+    if not isinstance(rows, list) or not rows:
+        raise ValueError(f"no list in response (code {data.get('code')})")
     out = []
     for i, r in enumerate(rows[:40], 1):
-        extra = r.get("extra") or {}
-        when = from_epoch(r.get("pubDate")) or from_epoch(extra.get("date")) or (from_iso(r["pubDate"]) if isinstance(r.get("pubDate"), str) else None)
-        info = extra.get("info")
-        heat = clean(info, 40) if isinstance(info, str) else None
-        out.append(item(name, i, r.get("title"), r.get("url") or r.get("mobileUrl"), desks, when, heat, extra.get("hover")))
+        if isinstance(r, str):
+            out.append(item(name, i, r, None, desks))
+            continue
+        heat = first(r, "hot_value_desc", "hot_value", "hot", "score", "heat")
+        heat = clean(heat, 30) if heat is not None else None
+        when = when_of(first(r, "created", "created_at", "event_time", "pub_time", "time", "date"))
+        out.append(item(name, i, first(r, "title", "name", "word", "keyword") or "", first(r, "link", "url", "href"), desks, when, heat,
+                        first(r, "desc", "description", "detail", "summary")))
     return out
+
+
+def fetch_v2ex():
+    rows = get_json("https://www.v2ex.com/api/topics/hot.json")
+    return [item("V2EX 热门", i, r.get("title"), r.get("url"), ["buzz", "ai"], from_epoch(r.get("created")), f"{r.get('replies', 0)} 回复")
+            for i, r in enumerate(rows if isinstance(rows, list) else [], 1)]
 
 
 def fetch_feed(url, name, desks, now):
@@ -238,16 +267,6 @@ def fetch_60s():
             when = None
     return [item("每天60秒读懂世界", i, n if isinstance(n, str) else (n.get("title") if isinstance(n, dict) else ""), link, ["policy", "buzz"], when)
             for i, n in enumerate(news, 1)]
-
-
-def fetch_reddit():
-    data = get_json("https://www.reddit.com/r/worldnews/top.json?t=day&limit=25")
-    out = []
-    for i, c in enumerate((data.get("data") or {}).get("children") or [], 1):
-        d = c.get("data") or {}
-        out.append(item("Reddit r/worldnews", i, d.get("title"), d.get("url"), ["policy", "buzz"], from_epoch(d.get("created_utc")),
-                        f"{d.get('score', 0)} 赞 · {d.get('num_comments', 0)} 评论"))
-    return out
 
 
 # ---- clustering: the same story seen by several sources ------------------
@@ -391,14 +410,14 @@ def main():
         sys.exit(__doc__)
     out = pathlib.Path(sys.argv[1])
     now = dt.datetime.now(dt.timezone.utc)
-    jobs = [(name, "hotlist", desks, (lambda s=sid, n=name, d=desks: fetch_newsnow(s, n, d))) for sid, name, desks in NEWSNOW]
+    jobs = [(name, "hotlist", desks, (lambda p=path, n=name, d=desks: fetch_sixty(p, n, d))) for path, name, desks in SIXTY]
     jobs += [(name, "rss", desks, (lambda u=url, n=name, d=desks: fetch_feed(u, n, d, now))) for url, name, desks in FEEDS]
     jobs += [
         ("Hacker News", "hotlist", ["ai", "business", "buzz"], fetch_hn),
         ("Hugging Face 每日论文", "hotlist", ["ai"], fetch_hf_papers),
         ("Steam 热销与新品", "hotlist", ["games"], fetch_steam),
         ("每天60秒读懂世界", "digest", ["policy", "buzz"], fetch_60s),
-        ("Reddit r/worldnews", "hotlist", ["policy", "buzz"], fetch_reddit),
+        ("V2EX 热门", "hotlist", ["buzz", "ai"], fetch_v2ex),
     ]
     with cf.ThreadPoolExecutor(max_workers=12) as pool:
         results = list(pool.map(run, jobs))

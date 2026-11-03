@@ -146,6 +146,10 @@ main { padding-block: 28px 56px; }
 .src a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-decoration-thickness: 1px; text-underline-offset: 3px; overflow-wrap: anywhere; }
 .src a:hover { color: var(--ink); text-decoration-color: currentColor; }
 
+.app-tools { display: grid; gap: 8px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink-2); }
+.app-tools .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.app-tools button { font-size: 14px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); cursor: pointer; }
+.app-tools b { color: var(--ink); }
 footer { border-top: 1px solid var(--rule); }
 .foot-in { padding-block: 24px 40px; display: grid; gap: 6px; color: var(--ink-3); font-size: 13px; line-height: 1.7; max-width: 80ch; }
 .foot-in b { color: var(--ink-2); }
@@ -209,6 +213,12 @@ footer { border-top: 1px solid var(--rule); }
 
 <footer>
   <div class="wrap foot-in">
+    <section class="app-tools" id="app-tools" hidden aria-label="App 通知">
+      <p class="row"><span>通知：<b id="notify-status">检查中</b></span>
+        <button type="button" id="notify-settings" hidden>打开通知设置</button></p>
+      <p>每天 08:30 检查新一期，当天如果出得晚，09:00、09:30、10:30、12:00 再查。收不到的话，到 设置 → 应用 → 五栏日报 → 电池，选“不限制”。</p>
+      <p class="row"><button type="button" id="test-notice">发送测试通知</button><span id="test-result" aria-live="polite"></span></p>
+    </section>
     <p><b>五栏日报</b> · 每天早上 8:00（新加坡时间）更新，覆盖前一天到当天早上的新闻。</p>
     <p>内容由 Claude 检索公开报道、交叉核对后整理成中文，难免有疏漏或错误；重要信息请点“来源”查看原文。标有“待证实”的条目目前只有单一来源。</p>
   </div>
@@ -534,6 +544,31 @@ footer { border-top: 1px solid var(--rule); }
     }, { rootMargin: '-90px 0px -60% 0px' });
     document.querySelectorAll('.sect').forEach(el => io.observe(el));
   }
+
+  // ---------- inside the Android app: notification status and a test button
+  function appTools() {
+    const app = window.WulanApp;
+    if (!app || typeof app.testNotice !== 'function') return;
+    $('app-tools').hidden = false;
+    const refresh = () => {
+      let on = false;
+      try { on = app.notifyStatus() === 'on'; } catch (_) {}
+      $('notify-status').textContent = on ? '已开启' : '未开启';
+      $('notify-settings').hidden = on;
+    };
+    refresh();
+    window.addEventListener('wulan-notify', refresh);
+    $('notify-settings').addEventListener('click', () => { try { app.openNotificationSettings(); } catch (_) {} });
+    $('test-notice').addEventListener('click', () => {
+      let r = '';
+      try { r = app.testNotice(); } catch (_) {}
+      $('test-result').textContent = r === 'ok' ? '已发送，看看通知栏。'
+        : r === 'asking' ? '请在弹出的窗口里允许通知，然后再点一次。'
+        : '通知被关掉了，点“打开通知设置”打开它。';
+      refresh();
+    });
+  }
+  appTools();
 
   // ---------- boot
   async function boot() {

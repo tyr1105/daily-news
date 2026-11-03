@@ -2,6 +2,7 @@ package io.github.tyr1105.wulan;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -9,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -43,8 +45,10 @@ public class MainActivity extends AppCompatActivity {
     private Uri site;
     private long loadedAt = 0L;
 
+    private boolean askedForNotifications = false;
+
     private final ActivityResultLauncher<String> askNotifications =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> { });
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> tellPageNotifyChanged());
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -132,6 +136,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (loadedAt > 0L && SystemClock.elapsedRealtime() - loadedAt > STALE_MS) load();
+        else tellPageNotifyChanged(); // e.g. back from the notification settings
+    }
+
+    private void tellPageNotifyChanged() {
+        if (web != null) web.evaluateJavascript("window.dispatchEvent(new Event('wulan-notify'))", null);
     }
 
     @Override
@@ -170,15 +179,59 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= 33
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
+            askedForNotifications = true;
             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS);
         }
     }
 
-    /** Called by the page when it shows the newest issue, so that issue is not notified again. */
+    /** What the page can ask the app (window.WulanApp). Only this site loads in the WebView. */
     private class Bridge {
+        /** The page shows the newest issue, so that issue is not notified again. */
         @JavascriptInterface
         public void seen(String date) {
             CheckWorker.markSeen(getApplicationContext(), date);
+        }
+
+        /** "on" or "off". */
+        @JavascriptInterface
+        public String notifyStatus() {
+            return CheckWorker.notificationsOn(getApplicationContext()) ? "on" : "off";
+        }
+
+        /** Posts a sample notification: "ok", "asking" (permission dialog shown) or "off". */
+        @JavascriptInterface
+        public String testNotice() {
+            Context ctx = getApplicationContext();
+            if (CheckWorker.notificationsOn(ctx)) {
+                CheckWorker.post(ctx, 2, getString(R.string.app_name) + " · 通知测试",
+                        "通知已开启。每天新一期出来后，会这样提醒你。", null);
+                return "ok";
+            }
+            if (Build.VERSION.SDK_INT >= 33 && !askedForNotifications
+                    && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                runOnUiThread(MainActivity.this::askForNotifications);
+                return "asking";
+            }
+            return "off";
+        }
+
+        /** Opens this app's notification settings. */
+        @JavascriptInterface
+        public void openNotificationSettings() {
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
+                } catch (Exception e) {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", getPackageName(), null)));
+                    } catch (Exception ignored) {
+                        // no settings screen available
+                    }
+                }
+            });
         }
     }
 }

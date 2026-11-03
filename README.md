@@ -15,10 +15,11 @@
 
 ## 怎么运作
 
-1. 每天早上，一个定时运行的 Claude 会话按 [EDITOR_GUIDE.md](EDITOR_GUIDE.md) 检索公开报道、交叉核对，写成中文。
-2. `scripts/publish_edition.py` 检查格式，把这一期写进 `docs/data/<日期>.json`，并更新往期目录 `docs/data/index.json`。
-3. 推送到 `main` 后，GitHub Pages 从 `docs/` 发布网站。
-4. App 每 15 分钟看一次 `data/index.json`，发现新一期就发通知。
+1. **05:35 采集**：GitHub Actions 运行 `scripts/fetch_sources.py`，抓取各平台热榜和权威媒体 RSS，生成带时间戳、排名和“多源同报”的候选清单，存到 `sources` 分支。
+2. **06:37 编辑**：一个定时运行的 Claude 会话按 [EDITOR_GUIDE.md](EDITOR_GUIDE.md) 从候选清单出发，检索核实、按热度信号排序，写成中文。
+3. `scripts/publish_edition.py` 检查格式，把这一期写进 `docs/data/<日期>.json`，并更新往期目录 `docs/data/index.json`。
+4. 推送到 `main` 后，GitHub Pages 从 `docs/` 发布网站。
+5. App 在 08:30 检查 `data/index.json`（当天出得晚的话 09:00、09:30、10:30、12:00 再查），发现新一期就发通知。
 
 想改关注点：直接编辑 [EDITOR_GUIDE.md](EDITOR_GUIDE.md) 里的“栏目设置”。
 

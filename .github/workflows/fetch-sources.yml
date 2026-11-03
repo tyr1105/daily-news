@@ -1,10 +1,10 @@
 name: Fetch news sources
 
-# 采集层：每天新加坡时间 06:05 抓取热榜和 RSS，结果放在 sources 分支（每次覆盖，不保留历史）。
-# 07:07 的每日编辑会先读这份候选清单。
+# 采集层：每天新加坡时间 05:35 抓取热榜和 RSS，结果放在 sources 分支（每次覆盖，不保留历史）。
+# 06:37 开工的每日编辑会先读这份候选清单。
 on:
   schedule:
-    - cron: '5 22 * * *'   # 22:05 UTC = 06:05 Asia/Singapore
+    - cron: '35 21 * * *'  # 21:35 UTC = 05:35 Asia/Singapore
   workflow_dispatch:
   push:
     branches: [main]
